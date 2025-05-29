@@ -74,9 +74,9 @@ cd ../
 
 cp -R "$WORKDIR" "$pkg_name"
 
-echo "7z a -tzip -mm=Deflate $pkg_name.zip $pkg_name -mx=9 mfb=257 -mmt=on -bb1 -bsp1"
+echo "7z a -tzip -mm=Deflate $pkg_name.zip $pkg_name -mx=9 -mfb=257 -mmt=on -bb1"
 
-7z a -tzip -mm=Deflate "$pkg_name.zip" "$pkg_name" -mx=9 mfb=257 -mmt=on -bb1 -bsp1
+7z a -tzip -mm=Deflate "$pkg_name.zip" "$pkg_name" -mx=9 -mfb=257 -mmt=on -bb1"
 
 echo "Upload to ModelScope"
 msUser=$MODELSCOPE_USERNAME
