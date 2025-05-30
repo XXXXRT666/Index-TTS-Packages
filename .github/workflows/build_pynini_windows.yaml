@@ -22,33 +22,48 @@ jobs:
         python -m pip install --upgrade pip
         pip install build
 
-    - name: Clone pynini
+    - name: Clone pynini and openfst
+      shell: pwsh
       run: |
         git clone https://github.com/XXXXRT666/pynini-2.1.6.post1.git
         cd pynini-2.1.6.post1/third_party
         git clone https://github.com/XXXXRT666/openfst-1.8.3
 
-    - name: Build OpenFST
+    - name: Build OpenFST and Pynini (log to file)
       shell: pwsh
       run: |
-        cd pynini-2.1.6.post1/third_party
-        mkdir build
-        cd build
-        cmake ../openfst-1.8.3 -G "Visual Studio 17 2022" -A x64 -DCMAKE_INSTALL_PREFIX=../openfst_install
-        cmake --build . --config Release --target install
-        cmake --install .
+        $log = "build_log_py${{ matrix.python-version }}.txt"
+        try {
+          "=== Start OpenFST Build ===" | Out-File $log
+          cd pynini-2.1.6.post1/third_party
+          mkdir build
+          cd build
+          cmake ../openfst-1.8.3 -G "Visual Studio 17 2022" -A x64 -DCMAKE_INSTALL_PREFIX=../openfst_install | Tee-Object -Append -FilePath ../../../../$log
+          cmake --build . --config Release --target install | Tee-Object -Append -FilePath ../../../../$log
+          cmake --install . | Tee-Object -Append -FilePath ../../../../$log
 
-    - name: Build Pynini wheel
-      shell: pwsh
-      run: |
-        cd pynini-2.1.6.post1
-        python -m build --wheel
+          "=== Start Pynini Build ===" | Tee-Object -Append -FilePath ../../../../$log
+          cd ../../..
+          python -m build --wheel | Tee-Object -Append -FilePath ../$log
+        }
+        catch {
+          "Build failed. Check log." | Tee-Object -Append -FilePath ../$log
+          exit 1
+        }
 
     - name: Upload wheel artifact
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: pynini-wheel-py${{ matrix.python-version }}
         path: pynini-2.1.6.post1/dist/*.whl
+
+    - name: Upload build log if failed
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-log-py${{ matrix.python-version }}
+        path: build_log_py${{ matrix.python-version }}.txt
 
   release:
     needs: build
