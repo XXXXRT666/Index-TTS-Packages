@@ -82,7 +82,7 @@ jobs:
         tag_name: pynini-build-${{ github.run_number }}
         name: Pynini Windows Wheels
         body: |
-          Built pynini-2.1.6.post1 wheels for Python 3.10–3.12 on Windows.
+          Built pynini-2.1.6 wheels for Python 3.10–3.12 on Windows.
         files: ./wheels/**/*.whl
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
