@@ -159,7 +159,7 @@ Copy-Item -Path $curr -Destination $pkgName -Recurse
 $zipPath = "$pkgName.zip"
 $start = Get-Date
 Write-Host "Compress Starting at $start"
-& "C:\Program Files\7-Zip\7z.exe" a -tzip -mm=Deflate "$zipPath" "$pkgName" -mx=9 -mfb=257 -mmt=on -bsp1
+& "C:\Program Files\7-Zip\7z.exe" a -tzip -mm=Deflate "$zipPath" "$pkgName" -mx=9 -mmt=on -bsp1
 $end = Get-Date
 Write-Host "Elapsed time: $($end - $start)"
 Get-ChildItem .
