@@ -21,6 +21,7 @@ sentencepiece
 librosa
 gradio
 funasr==1.0.27
+modelscope
 tqdm
 addict
 datasets==2.18.0
