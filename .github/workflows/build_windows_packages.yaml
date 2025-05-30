@@ -18,7 +18,7 @@ jobs:
       TORCH_CUDA: ${{ matrix.torch_cuda }}
       MODELSCOPE_USERNAME: ${{ secrets.MODELSCOPE_USERNAME }}
       MODELSCOPE_TOKEN: ${{ secrets.MODELSCOPE_TOKEN }}
-      DATE_SUFFIX: ${{ github.event.inputs.date }}
+      DATE: ${{ github.event.inputs.date }}
 
     steps:
       - name: Checkout
