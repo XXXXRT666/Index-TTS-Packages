@@ -44,7 +44,7 @@ jobs:
           cmake --install . 2>&1 | Tee-Object -Append -FilePath $log | Out-Null
 
           "=== Start Pynini Build ===" | Tee-Object -Append -FilePath $log | Out-Null
-          cd ../../..
+          cd ../..
           python -m build --wheel 2>&1 | Tee-Object -Append -FilePath $log | Out-Null
         }
         catch {
