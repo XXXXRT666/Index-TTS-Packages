@@ -237,7 +237,7 @@ process_name_uvr5 = i18n("人声分离WebUI")
 def change_uvr5():
     global p_uvr5
     if p_uvr5 is None:
-        cmd = 'PYTHONPATH=. "%s" tools/uvr5/webui.py "%s" %s %s %s' % (
+        cmd = '"%s" -s tools/uvr5/webui.py "%s" %s %s %s' % (
             python_exec,
             infer_device,
             is_half,
@@ -267,7 +267,7 @@ process_name_tts = i18n("TTS推理WebUI")
 def change_tts_inference():
     global p_tts_inference
     #####v3暂不支持加速推理
-    cmd = 'PYTHONPATH=. "%s" indextts/inference_webui.py "%s"' % (python_exec, language)
+    cmd = '"%s" -s indextts/inference_webui.py "%s"' % (python_exec, language)
     if p_tts_inference is None:
         os.environ["is_half"] = str(is_half)
         os.environ["infer_ttswebui"] = str(webui_port_infer_tts)
@@ -298,7 +298,7 @@ def open_denoise(denoise_inp_dir, denoise_opt_dir):
         denoise_inp_dir = clean_path(denoise_inp_dir)
         denoise_opt_dir = clean_path(denoise_opt_dir)
         check_for_existance([denoise_inp_dir])
-        cmd = 'PYTHONPATH=. "%s" tools/cmd-denoise.py -i "%s" -o "%s" -p %s' % (
+        cmd = '"%s" -s tools/cmd-denoise.py -i "%s" -o "%s" -p %s' % (
             python_exec,
             denoise_inp_dir,
             denoise_opt_dir,
@@ -380,7 +380,7 @@ def open_slice(inp, opt_root, threshold, min_length, min_interval, hop_size, max
         return
     if ps_slice == []:
         for i_part in range(n_parts):
-            cmd = 'PYTHONPATH=. "%s" tools/slice_audio.py "%s" "%s" %s %s %s %s %s %s %s %s %s' % (
+            cmd = '"%s" -s tools/slice_audio.py "%s" "%s" %s %s %s %s %s %s %s %s %s' % (
                 python_exec,
                 inp,
                 opt_root,
@@ -446,7 +446,7 @@ def close_slice():
 if os.path.exists(os.path.join("checkpoints", "gpt.pth")):
     ...
 else:
-    cmd = 'PYTHONPATH=. "%s" tools/download_models.py' % python_exec
+    cmd = '"%s" -s tools/download_models.py' % python_exec
     p = Popen(cmd, shell=True)
     p.wait()
 
