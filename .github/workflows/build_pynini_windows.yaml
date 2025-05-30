@@ -38,16 +38,17 @@ jobs:
           cd pynini-2.1.6.post1/third_party
           mkdir build
           cd build
-          cmake ../openfst-1.8.3 -G "Visual Studio 17 2022" -A x64 "-DCMAKE_INSTALL_PREFIX=../openfst_install" | Tee-Object -Append -FilePath $log
-          cmake --build . --config Release --target install | Tee-Object -Append -FilePath $log
-          cmake --install . | Tee-Object -Append -FilePath $log
 
-          "=== Start Pynini Build ===" | Tee-Object -Append -FilePath $log
+          cmake ../openfst-1.8.3 -G "Visual Studio 17 2022" -A x64 "-DCMAKE_INSTALL_PREFIX=../openfst_install" 2>&1 | Tee-Object -Append -FilePath $log | Out-Null
+          cmake --build . --config Release --target install 2>&1 | Tee-Object -Append -FilePath $log | Out-Null
+          cmake --install . 2>&1 | Tee-Object -Append -FilePath $log | Out-Null
+
+          "=== Start Pynini Build ===" | Tee-Object -Append -FilePath $log | Out-Null
           cd ../../..
-          python -m build --wheel | Tee-Object -Append -FilePath $log
+          python -m build --wheel 2>&1 | Tee-Object -Append -FilePath $log | Out-Null
         }
         catch {
-          "Build failed. Check log." | Tee-Object -Append -FilePath $log
+          "Build failed. Check log." | Tee-Object -Append -FilePath $log | Out-Null
           exit 1
         }
 
