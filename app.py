@@ -23,18 +23,16 @@ import psutil
 import torch
 
 from config import (
-    exp_root,
     infer_device,
     is_half,
     is_share,
     python_exec,
     webui_port_infer_tts,
     webui_port_main,
-    webui_port_subfix,
     webui_port_uvr5,
 )
 from tools.asr_rename import asr_and_rename_files
-from tools.common import check_for_existance, clean_path
+from tools.common import check_for_existance, clean_path, list_root_directories
 from tools.i18n.i18n import I18nAuto, scan_language_list
 
 os.environ["TORCH_DISTRIBUTED_DEBUG"] = "INFO"
@@ -666,4 +664,5 @@ with gr.Blocks(title="IndexTTS WebUI", analytics_enabled=False) as app:
         share=is_share,
         server_port=webui_port_main,
         quiet=True,
+        allowed_paths=list_root_directories(),
     )

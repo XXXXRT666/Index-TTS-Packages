@@ -6,7 +6,7 @@ import traceback
 import gradio as gr
 from modelscope import snapshot_download
 
-from tools.common import clean_path
+from tools.common import clean_path, list_root_directories
 from tools.i18n.i18n import I18nAuto
 
 i18n = I18nAuto()
@@ -298,4 +298,5 @@ app.queue().launch(  # concurrency_count=511, max_size=1022
     share=is_share,
     server_port=webui_port_uvr5,
     quiet=True,
+    allowed_paths=list_root_directories(),
 )

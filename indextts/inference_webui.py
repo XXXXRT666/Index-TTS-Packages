@@ -25,6 +25,7 @@ import numpy as np
 import torch
 
 from indextts.infer import IndexTTS
+from tools.common import list_root_directories
 from tools.i18n.i18n import I18nAuto, scan_language_list
 
 tts = IndexTTS(model_dir="checkpoints", cfg_path="checkpoints/config.yaml")
@@ -561,4 +562,5 @@ if __name__ == "__main__":
         share=is_share,
         server_port=infer_ttswebui,
         quiet=True,
+        allowed_paths=list_root_directories(),
     )
