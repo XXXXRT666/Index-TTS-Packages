@@ -123,24 +123,28 @@ switch ($cuda) {
 }
 
 Write-Host "[INFO] Installing dependencies..."
-$condaUrl = "https://anaconda.org/conda-forge/pynini/2.1.6/download/win-64/pynini-2.1.6-py310h232114e_0.conda"
-$condaFile = "$tmpDir/pynini.conda"
-$venvDir = ".\venv"
-Invoke-WebRequest $condaUrl -OutFile $condaFile
-& "C:\Program Files\7-Zip\7z.exe" e $condaFile -o"$tmpDir" -aoa
-$zst = Get-ChildItem "$tmpDir" -Filter "pkg-*.tar.zst" | Select-Object -First 1
-& "C:\Program Files\7-Zip\7z.exe" e $zst.FullName -o"$tmpDir" -aoa
-$tar = Get-ChildItem "$tmpDir" -Filter "*.tar" | Select-Object -First 1
-& "C:\Program Files\7-Zip\7z.exe" x $tar.FullName -o"$tmpDir\extracted" -aoa
-Copy-Item "$tmpDir\extracted\Library\include\*" -Destination "$venvDir\include" -Recurse -Force
-Copy-Item "$tmpDir\extracted\Lib\site-packages\*" -Destination "$venvDir\Lib\site-packages" -Recurse -Force
+$repo = $env:GITHUB_REPOSITORY
+$apiUrl = "https://api.github.com/repos/$repo/releases/latest"
+$headers = @{
+  "User-Agent" = "PowerShell"
+  "Authorization" = "Bearer $env:GITHUB_TOKEN"
+}
+Write-Host "$apiUrl"
+$release = Invoke-RestMethod -Uri $apiUrl -Headers $headers
+Write-Host "$release"
+$asset = $release.assets | Where-Object { $_.name -match "pynini-2\.1\.6-cp310-cp310-win_amd64\.whl" } | Select-Object -First 1
+if (-not $asset) {
+    Write-Error "No Match Whl"
+    exit 1
+}
+$wheelPath = "$tmpDir\$($asset.name)"
+Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $wheelPath
+& ".\venv\python.exe" -m pip install $wheelPath
 & ".\venv\python.exe" -m pip show pynini
 & ".\venv\python.exe" -m pip install deepspeed --only-binary=:all:
-ls c:\users\runneradmin\appdata\local\pip\cache
 & ".\venv\python.exe" -m pip install -r requirements.txt --no-warn-script-location
 & ".\venv\python.exe" -m pip uninstall onnxruntime
 & ".\venv\python.exe" -m pip install onnxruntime-gpu
-ls c:\users\runneradmin\appdata\local\pip\cache
 
 Write-Host "[INFO] Download Models..."
 python -m pip install --upgrade pip
@@ -150,7 +154,7 @@ huggingface-cli download IndexTeam/IndexTTS-1.5 config.yaml bigvgan_discriminato
 Write-Host "[INFO] Preparing final directory $pkgName ..."
 $items = @(Get-ChildItem -Filter "*.sh") +
          @(Get-ChildItem -Filter "*.ipynb") +
-         @("$tmpDir", ".github", "Docker", "docs", ".gitignore", ".dockerignore", "README.md")
+         @("$tmpDir", ".github", "Docker", "docs", ".gitignore", ".dockerignore")
 Remove-Item $items -Force -Recurse -ErrorAction SilentlyContinue
 $curr = Get-Location
 Set-Location ../

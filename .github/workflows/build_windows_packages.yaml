@@ -19,6 +19,8 @@ jobs:
       MODELSCOPE_USERNAME: ${{ secrets.MODELSCOPE_USERNAME }}
       MODELSCOPE_TOKEN: ${{ secrets.MODELSCOPE_TOKEN }}
       DATE: ${{ github.event.inputs.date }}
+      GITHUB_REPOSITORY: ${{ github.event.repository.name }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout
