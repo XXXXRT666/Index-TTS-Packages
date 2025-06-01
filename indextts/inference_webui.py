@@ -1,8 +1,21 @@
 import logging
+import os
+import random
+import re
 import subprocess
+import sys
 import warnings
+from functools import partial
+from time import time as ttime
 
-import torchaudio
+import gradio as gr
+import numpy as np
+import torch
+
+from assets.assets import css, js, top_html
+from indextts.infer import IndexTTS
+from tools.common import list_root_directories
+from tools.i18n.i18n import I18nAuto, scan_language_list
 
 logging.getLogger("markdown_it").setLevel(logging.ERROR)
 logging.getLogger("urllib3").setLevel(logging.ERROR)
@@ -13,20 +26,7 @@ logging.getLogger("charset_normalizer").setLevel(logging.ERROR)
 logging.getLogger("torchaudio._extension").setLevel(logging.ERROR)
 logging.getLogger("multipart.multipart").setLevel(logging.ERROR)
 warnings.simplefilter(action="ignore", category=FutureWarning)
-
-import os
-import random
-import re
-import sys
-from time import time as ttime
-
-import gradio as gr
-import numpy as np
-import torch
-
-from indextts.infer import IndexTTS
-from tools.common import list_root_directories
-from tools.i18n.i18n import I18nAuto, scan_language_list
+warnings.simplefilter(action="ignore", category=UserWarning)
 
 tts = IndexTTS(model_dir="checkpoints", cfg_path="checkpoints/config.yaml")
 device = tts.device
@@ -35,10 +35,7 @@ infer_ttswebui = os.environ.get("infer_ttswebui", 9872)
 infer_ttswebui = int(infer_ttswebui)
 is_share = os.environ.get("is_share", "False")
 is_share = eval(is_share)
-if "_CUDA_VISIBLE_DEVICES" in os.environ:
-    os.environ["CUDA_VISIBLE_DEVICES"] = os.environ["_CUDA_VISIBLE_DEVICES"]
 is_half = eval(os.environ.get("is_half", "True")) and torch.cuda.is_available()
-# is_half=False
 punctuation = set(["!", "?", "…", ",", ".", "-", " "])
 
 
@@ -59,26 +56,11 @@ language = os.environ.get("language", "zh_CN")
 language = sys.argv[-1] if sys.argv[-1] in scan_language_list() else language
 i18n = I18nAuto(language=language)
 
-# os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'  # 确保直接启动推理UI时也能够设置。
-
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
 now_dir = os.getcwd()
-splits = {
-    "，",
-    "。",
-    "？",
-    "！",
-    ",",
-    ".",
-    "?",
-    "!",
-    "~",
-    ":",
-    "：",
-    "—",
-    "…",
-}
+splits = {"，", "。", "？", "！", ",", ".", "?", "!", "~", ":", "：", "—", "…"}
 
 
 def merge_short_text_in_array(texts, threshold):
@@ -99,13 +81,7 @@ def merge_short_text_in_array(texts, threshold):
     return result
 
 
-##ref_wav_path+prompt_text+prompt_language+text(单个)+text_language+top_k+top_p+temperature
-# cache_tokens={}#暂未实现清理机制
-cache = {}
-
-
 def get_tts_wav(ref_wav_path, text, index, output_dir):
-    global cache
     if ref_wav_path:
         pass
     else:
@@ -250,13 +226,24 @@ def split_text(full_text, how_to_cut):
     else:
         text = full_text
     text = re.sub("[\n]+", "\n", text)
-    lines = text.split("\n")
+    lines = [t.strip() for t in text.split("\n")]
+    text = "\n".join(lines)
     start = 0
     end = min(9, len(lines))
     have_next = True
     if end < 9:
         have_next = False
-    return text, lines, gr.update(interactive=False), gr.update(interactive=have_next), start, end
+
+    return (
+        text,
+        lines,
+        gr.Button(interactive=False, visible=True),
+        gr.Button(interactive=have_next, visible=True),
+        gr.Button(interactive=False, visible=True),
+        gr.Button(interactive=have_next, visible=True),
+        gr.Textbox(str(start), visible=True),
+        gr.Textbox(str(end), visible=True),
+    )
 
 
 def update_text(full_text):
@@ -266,7 +253,17 @@ def update_text(full_text):
     have_next = True
     if end < 9:
         have_next = False
-    return full_text, lines, gr.update(interactive=False), gr.update(interactive=have_next), start, end
+
+    return (
+        full_text,
+        lines,
+        gr.Button(interactive=False, visible=True),
+        gr.Button(interactive=have_next, visible=True),
+        gr.Button(interactive=False, visible=True),
+        gr.Button(interactive=have_next, visible=True),
+        gr.Textbox(str(start), visible=True),
+        gr.Textbox(str(end), visible=True),
+    )
 
 
 def custom_sort_key(s):
@@ -310,7 +307,14 @@ def next_page(id_start, id_end, batch_size, df):
     have_next = True
     if id_end >= len(df.values) - 1:
         have_next = False
-    return gr.update(interactive=True), gr.update(interactive=have_next), id_start, id_end
+    return (
+        gr.Button(interactive=True),
+        gr.Button(interactive=have_next),
+        gr.Button(interactive=True),
+        gr.Button(interactive=have_next),
+        id_start,
+        id_end,
+    )
 
 
 def prev_page(id_start, id_end, batch_size, df):
@@ -324,7 +328,14 @@ def prev_page(id_start, id_end, batch_size, df):
     have_prev = True
     if id_start <= 0:
         have_prev = False
-    return gr.update(interactive=have_prev), gr.update(interactive=True), id_start, id_end
+    return (
+        gr.Button(interactive=have_prev),
+        gr.Button(interactive=True),
+        gr.Button(interactive=have_prev),
+        gr.Button(interactive=True),
+        id_start,
+        id_end,
+    )
 
 
 def ensure_dir(path):
@@ -378,181 +389,223 @@ def open_finder():
         gr.Warning(i18n(f"打开文件管理器失败: {str(e)}"))
 
 
-with gr.Blocks(title="Index-TTS Editor", analytics_enabled=False) as app:
-    gr.Markdown(
-        value=i18n(
-            "本软件以Apache License 2.0协议开源, 作者不对软件具备任何控制力, 使用软件者、传播软件导出的声音者自负全责."
-        )
-        + "<br>"
-        + i18n("如不认可该条款, 则不能使用或引用软件包内任何代码和文件. 详见根目录LICENSE.")
-    )
-    with gr.Group():
-        with gr.Row():
-            with gr.Column():
-                inp_dir = gr.Textbox(
-                    label=i18n("参考音频目录"),
-                    value="WORKSPACE/output/denoise_opt",
-                    placeholder=i18n(
-                        "填写参考音频文件所在的文件夹地址，或将文件放入项目根目录下的WORKSPACE文件夹后在下方选择"
-                    ),
-                    interactive=True,
-                    show_copy_button=True,
-                )
-                inp_explorer = gr.FileExplorer(
-                    label=i18n("打开文件浏览器"),
-                    interactive=True,
-                    value="WORKSPACE/output/denoise_opt",
-                    file_count="single",
-                    root_dir="WORKSPACE",
-                    ignore_glob="**/.*",
-                )
-        #     with gr.Column(scale=7):
-        #         open_finder_btn = gr.Button(i18n("打开系统文件管理器"), variant="primary")
-        # open_finder_btn.click(open_finder,inputs=[],outputs=[])
-        #     inp_ref = gr.Audio(label=i18n("请上传3~10秒内参考音频，超过会报错！"), type="filepath", scale=7)
-        out_dir = gr.Textbox(
-            label=i18n("输出音频目录"), value="", interactive=True, placeholder=i18n("输入输出音频文件的目录路径")
-        )
-        inp_explorer.change(ensure_dir, inputs=inp_explorer, outputs=[inp_dir, out_dir])
-        # load_prompts_btn = gr.Button(i18n("加载参考音频"), variant="primary")
-
-        gr.Markdown(html_center(i18n("*请填写需要合成的目标文本"), "h3"))
-        with gr.Row():
-            with gr.Column(scale=13):
-                text = gr.Textbox(label=i18n("需要合成的文本"), value="", lines=26, max_lines=26)
-            with gr.Column():
-                cut_method_dropdown = gr.Dropdown(
-                    label=i18n("切分文本方法"),
-                    value=i18n("按标点符号切"),
-                    choices=[
-                        i18n("凑四句一切"),
-                        i18n("凑50字一切"),
-                        i18n("按中文句号。切"),
-                        i18n("按英文句号.切"),
-                        i18n("按标点符号切"),
-                    ],
-                )
-                cut_text_btn = gr.Button(i18n("切分文本"), variant="primary")
-                load_text_btn = gr.Button(i18n("刷新文本&参考音频列表"), variant="primary")
-                batch_size = gr.Slider(label=i18n("批处理大小"), value=10, minimum=1, maximum=10, step=1, visible=False)
-                df_len = gr.Textbox(label=i18n("文本分句总数"), value="0", interactive=False)
-
-        with gr.Row():
-            df = gr.DataFrame(
-                col_count=2, label=i18n("文本列表"), interactive=False, show_row_numbers=True, visible=False
+with gr.Blocks(title="Index-TTS Editor", analytics_enabled=False, css=css, js=js) as app:
+    timer = gr.Timer(value=0.1, active=False)
+    timer.tick(lambda: gr.Timer(active=False), inputs=[], outputs=[timer])
+    gr.HTML(
+        top_html.format(
+            i18n(
+                "本软件以Apache License 2.0协议开源, 作者不对软件具备任何控制力, 使用软件者、传播软件导出的声音者自负全责."
             )
-            df.change(lambda x: len(x), inputs=df, outputs=[df_len], queue=False)
-        with gr.Row(max_height=80):
-            prev_page_btn = gr.Button(i18n("上一页"), variant="primary")
-            id_start = gr.Textbox(value="0", label=i18n("最小序号"), interactive=False)
-            id_end = gr.Textbox(value=f"{batch_size.value}", label=i18n("最大序号"), interactive=False)
-            next_page_btn = gr.Button(i18n("下一页"), variant="primary")
+            + "<br>"
+            + i18n("如不认可该条款, 则不能使用或引用软件包内任何代码和文件. 详见根目录LICENSE.")
+        ),
+        elem_classes="markdown",
+    )
+    # with gr.Group():
+    with gr.Row():
+        with gr.Column():
+            inp_dir = gr.Textbox(
+                label=i18n("参考音频目录"),
+                value="WORKSPACE/output/denoise_opt",
+                placeholder=i18n(
+                    "填写参考音频文件所在的文件夹地址，或将文件放入项目根目录下的WORKSPACE文件夹后在下方选择"
+                ),
+                interactive=False,
+                show_copy_button=True,
+            )
+            inp_explorer = gr.FileExplorer(
+                label=i18n("打开文件浏览器"),
+                interactive=True,
+                value="WORKSPACE/output/denoise_opt",
+                file_count="single",
+                root_dir="WORKSPACE",
+                ignore_glob="**/.*",
+            )
+    #     with gr.Column(scale=7):
+    #         open_finder_btn = gr.Button(i18n("打开系统文件管理器"), variant="primary")
+    # open_finder_btn.click(open_finder,inputs=[],outputs=[])
+    #     inp_ref = gr.Audio(label=i18n("请上传3~10秒内参考音频，超过会报错！"), type="filepath", scale=7)
+    out_dir = gr.Textbox(
+        label=i18n("输出音频目录"), value="", interactive=True, placeholder=i18n("输入输出音频文件的目录路径")
+    )
+    inp_explorer.change(ensure_dir, inputs=inp_explorer, outputs=[inp_dir, out_dir])
+    inp_dir.change()
 
-        cut_text_btn.click(
-            split_text,
-            inputs=[text, cut_method_dropdown],
-            outputs=[text, df, prev_page_btn, next_page_btn, id_start, id_end],
-        )
-        next_page_btn.click(
-            next_page,
-            inputs=[id_start, id_end, batch_size, df],
-            outputs=[prev_page_btn, next_page_btn, id_start, id_end],
-        )
-        prev_page_btn.click(
-            prev_page,
-            inputs=[id_start, id_end, batch_size, df],
-            outputs=[prev_page_btn, next_page_btn, id_start, id_end],
-        )
-        load_text_btn.click(
-            update_text, inputs=text, outputs=[text, df, prev_page_btn, next_page_btn, id_start, id_end]
-        )
+    # load_prompts_btn = gr.Button(i18n("加载参考音频"), variant="primary")
 
-        @gr.render(
-            inputs=[df, id_start, id_end],
-            triggers=[df.change, id_start.change, load_text_btn.click],
-            queue=False,
-            concurrency_limit=1,
-        )
-        def render_texts(df, id_start, id_end):
-            if len(df.values) == 0:
+    gr.Markdown(html_center(i18n("*请填写需要合成的目标文本"), "h3"))
+    with gr.Row():
+        with gr.Column(scale=2):
+            text = gr.Textbox(label=i18n("需要合成的文本"), value="", lines=26, max_lines=26)
+        with gr.Column():
+            cut_method_dropdown = gr.Dropdown(
+                label=i18n("切分文本方法"),
+                value=i18n("按标点符号切"),
+                choices=[
+                    i18n("凑四句一切"),
+                    i18n("凑50字一切"),
+                    i18n("按中文句号。切"),
+                    i18n("按英文句号.切"),
+                    i18n("按标点符号切"),
+                ],
+            )
+            cut_text_btn = gr.Button(i18n("切分文本"), variant="primary")
+            load_text_btn = gr.Button(i18n("刷新文本&参考音频列表"), variant="primary")
+            batch_size = gr.Slider(label=i18n("批处理大小"), value=10, minimum=1, maximum=10, step=1, visible=False)
+            df_len = gr.Textbox(label=i18n("文本分句总数"), value="0", interactive=False, visible=False)
+            id_start = gr.Textbox(value="0", label=i18n("最小序号"), interactive=False, max_lines=1, visible=False)
+            id_end = gr.Textbox(
+                value=f"{batch_size.value}", label=i18n("最大序号"), interactive=False, max_lines=1, visible=False
+            )
+            prev_page_btn = gr.Button(i18n("上一页"), variant="primary", visible=False, elem_id="prev_btn")
+            next_page_btn = gr.Button(i18n("下一页"), variant="primary", visible=False, elem_id="next_btn")
+
+    with gr.Row(equal_height=True):
+        df = gr.DataFrame(col_count=2, label=i18n("文本列表"), interactive=False, show_row_numbers=True, visible=False)
+        df.change(lambda x: gr.Textbox(str(len(x)), visible=True), inputs=df, outputs=[df_len], queue=False)
+
+    @gr.render(
+        inputs=[df, id_start, id_end, inp_dir],
+        triggers=[df.change, id_start.change, load_text_btn.click, timer.tick],
+        queue=False,
+        concurrency_limit=1,
+    )
+    def render_texts(df, id_start, id_end, input_dir):
+        if len(df.values) == 0:
+            with gr.Row():
                 gr.Markdown("## No Input Provided", key="no_input")
-            else:
-                start = int(id_start)
-                end = int(id_end)
-                for i, input_ in enumerate(df.values):
-                    # print(type(i))
-                    if i < start:
-                        continue
-                    if i > end:
-                        break
-                    with gr.Row(max_height=200):
-                        sentence_index = gr.Textbox(
-                            value=str(i),
-                            label="序号",
-                            interactive=False,
-                            # key=f"index_{i}",
-                            min_width=10,
-                        )
-                        with gr.Column():
+        else:
+            start = int(id_start)
+            end = int(id_end)
+            for i, input_ in enumerate(df.values):
+                # print(type(i))
+                if i < start:
+                    continue
+                if i > end:
+                    break
+                with gr.Row(equal_height=True):
+                    with gr.Column():
+                        with gr.Row(equal_height=True):
                             sentence_text = gr.Textbox(
                                 value=input_[0],
                                 type="text",
-                                max_lines=3,
+                                lines=1,
+                                max_lines=6,
                                 # key=f"text_{i}",
-                                label="目标文本",
+                                label=f"目标文本 {i}",
                                 interactive=False,
                             )
-                            choices = load_prompt(inp_dir.value)
-                            ref_selector = gr.Dropdown(
-                                label=i18n("选择参考音频"),
-                                choices=choices,
-                                value=choices[0] if len(choices) > 0 else None,
-                            )
+                    with gr.Column():
+                        prompt_choices = load_prompt(input_dir)
+                        ref_selector = gr.Dropdown(
+                            label=i18n("选择参考音频"),
+                            choices=prompt_choices,
+                            value=prompt_choices[0] if len(prompt_choices) > 0 else None,
+                        )
 
-                        default_prompt_path = os.path.join(inp_dir.value, choices[0]) if len(choices) > 0 else None
-                        if default_prompt_path:
-                            ref_audio = gr.Audio(
-                                label=i18n("或者上传音频文件"),
-                                interactive=True,
-                                value=default_prompt_path,
+                        default_prompt_path = (
+                            os.path.join(input_dir, prompt_choices[0]) if len(prompt_choices) > 0 else None
+                        )
+
+                        ref_audio = gr.Audio(
+                            label=i18n("或者上传音频文件"),
+                            interactive=True,
+                            value=default_prompt_path,
+                            type="filepath",
+                            sources="upload",
+                            waveform_options={"show_recording_waveform": False, "show_controls": False},
+                        )
+
+                    with gr.Column():
+                        target_path = f"{i:04d}-{input_[0][:20]}.wav"
+                        if os.path.isfile(target_path):
+                            audio = gr.Audio(
+                                label="生成结果",
+                                interactive=False,
+                                show_download_button=True,
                                 type="filepath",
+                                value=target_path,
+                                waveform_options={"show_recording_waveform": False, "show_controls": False},
                             )
                         else:
-                            ref_audio = gr.Audio(label=i18n("或者上传音频文件"), interactive=True, type="filepath")
-
-                        with gr.Column():
+                            audio = gr.Audio(
+                                label="生成结果",
+                                interactive=False,
+                                show_download_button=True,
+                                type="filepath",
+                                waveform_options={"show_recording_waveform": False, "show_controls": False},
+                            )
+                        with gr.Row():
                             regen_button = gr.Button(
                                 "生成音频",
                                 key=f"regen_{i}",
                                 interactive=True,
                                 variant="primary",
                             )
-                            target_path = f"{i:04d}-{input_[0][:20]}.wav"
-                            if os.path.isfile(target_path):
-                                audio = gr.Audio(
-                                    label="生成结果",
-                                    interactive=False,
-                                    show_download_button=True,
-                                    type="filepath",
-                                    value=target_path,
-                                )
-                            else:
-                                audio = gr.Audio(
-                                    label="生成结果", interactive=False, show_download_button=True, type="filepath"
-                                )
 
-                        def gen_single(ref_path, text, index, out_dir):
-                            return get_tts_wav(ref_path, text, index, out_dir)
+                    def gen_single(ref_path, text, out_dir, index):
+                        return get_tts_wav(ref_path, text, index, out_dir)
 
-                        ref_selector.select(update_audio, inputs=[inp_dir, ref_selector], outputs=ref_audio)
+                    ref_selector.select(update_audio, inputs=[inp_dir, ref_selector], outputs=ref_audio)
 
-                        regen_button.click(
-                            gen_single,
-                            inputs=[ref_audio, sentence_text, sentence_index, out_dir],
-                            concurrency_limit=1,
-                            concurrency_id="gpu_queue",
-                            outputs=[audio],
-                        )
+                    regen_button.click(
+                        partial(gen_single, index=i),
+                        inputs=[ref_audio, sentence_text, out_dir],
+                        concurrency_limit=1,
+                        concurrency_id="gpu_queue",
+                        outputs=[audio],
+                    )
+
+    with gr.Row():
+        prev_page_btn_ = gr.Button(i18n("上一页"), variant="primary", visible=False)
+        next_page_btn_ = gr.Button(i18n("下一页"), variant="primary", visible=False)
+
+    prev_page_btn.click(
+        prev_page,
+        inputs=[id_start, id_end, batch_size, df],
+        outputs=[prev_page_btn, next_page_btn, prev_page_btn_, next_page_btn_, id_start, id_end],
+        scroll_to_output=True,
+    )
+    next_page_btn.click(
+        next_page,
+        inputs=[id_start, id_end, batch_size, df],
+        outputs=[prev_page_btn, next_page_btn, prev_page_btn_, next_page_btn_, id_start, id_end],
+        scroll_to_output=True,
+    )
+
+    prev_page_btn_.click(  # Previous Page Button on the Bottom, Binding to Previous Page Button on the Top
+        lambda: None,
+        [],
+        [],
+        js="""
+        () => {
+        document.getElementById("prev_btn").click();
+        }""",
+        trigger_mode="once",
+    )
+
+    next_page_btn_.click(  # Next Page Button on the Bottom, Binding to Next Page Button on the Top
+        lambda: None,
+        [],
+        [],
+        js="""
+        () => {
+        document.getElementById("next_btn").click();
+        }""",
+        trigger_mode="once",
+    )
+
+    load_text_btn.click(
+        update_text,
+        inputs=text,
+        outputs=[text, df, prev_page_btn, next_page_btn, prev_page_btn_, next_page_btn_, id_start, id_end],
+    )
+    cut_text_btn.click(
+        split_text,
+        inputs=[text, cut_method_dropdown],
+        outputs=[text, df, prev_page_btn, next_page_btn, prev_page_btn_, next_page_btn_, id_start, id_end],
+    )
 
 
 if __name__ == "__main__":
@@ -563,4 +616,5 @@ if __name__ == "__main__":
         server_port=infer_ttswebui,
         quiet=True,
         allowed_paths=list_root_directories(),
+        show_api=False,
     )

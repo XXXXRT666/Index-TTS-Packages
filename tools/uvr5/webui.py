@@ -299,4 +299,5 @@ app.queue().launch(  # concurrency_count=511, max_size=1022
     server_port=webui_port_uvr5,
     quiet=True,
     allowed_paths=list_root_directories(),
+    show_api=False,
 )

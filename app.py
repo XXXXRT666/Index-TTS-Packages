@@ -31,7 +31,8 @@ from config import (
     webui_port_main,
     webui_port_uvr5,
 )
-from tools.asr_rename import asr_and_rename_files
+
+# from tools.asr_rename import asr_and_rename_files
 from tools.common import check_for_existance, clean_path, list_root_directories
 from tools.i18n.i18n import I18nAuto, scan_language_list
 
@@ -493,56 +494,92 @@ with gr.Blocks(title="IndexTTS WebUI", analytics_enabled=False) as app:
     with gr.Tabs():
         with gr.TabItem("0-" + i18n("prompt制作")):  # 提前随机切片防止uvr5爆内存->uvr5->slicer->asr->打标
             with gr.Accordion(label="0a-" + i18n("UVR5人声伴奏分离&去混响去延迟工具")):
-                with gr.Row():
+                with gr.Row(equal_height=True):
                     with gr.Column(scale=3):
                         with gr.Row():
                             uvr5_info = gr.Textbox(label=process_info(process_name_uvr5, "info"))
-                    open_uvr5 = gr.Button(
-                        value=process_info(process_name_uvr5, "open"), variant="primary", visible=True
-                    )
-                    close_uvr5 = gr.Button(
-                        value=process_info(process_name_uvr5, "close"), variant="primary", visible=False
-                    )
+                    with gr.Column(scale=1):
+                        open_uvr5 = gr.Button(
+                            value=process_info(process_name_uvr5, "open"), variant="primary", visible=True
+                        )
+                        close_uvr5 = gr.Button(
+                            value=process_info(process_name_uvr5, "close"), variant="primary", visible=False
+                        )
 
             with gr.Accordion(label="0b-" + i18n("语音切分工具")):
-                with gr.Row():
+                with gr.Row(equal_height=True):
                     with gr.Column(scale=3):
-                        with gr.Row():
+                        with gr.Row(equal_height=True):
                             with gr.Column():
-                                # with gr.Row():
-                                slice_inp_path = gr.Textbox(
-                                    label=i18n(
-                                        "填写音频自动切分输入路径，或在将文件放入项目根目录下的WORKSPACE后在下方选择"
-                                    ),
-                                    interactive=True,
-                                    value="",
-                                )
-                                # slice_inp_btn = gr.Button(value=i18n("选择"), variant="primary", visible=True)
-                                slice_inp_ex = gr.FileExplorer(
-                                    label=i18n("填写音频自动切分输入路径，或在下方选择"),
-                                    file_count="single",
-                                    interactive=True,
-                                    root_dir="WORKSPACE",
-                                    visible=True,
-                                    ignore_glob="**/.DS_Store",
-                                )
-                                slice_inp_ex.change(update_path, [slice_inp_ex], [slice_inp_path])
-                                # slice_inp_btn.click(toggle_path, [slice_inp_ex], [slice_inp_ex])
-                            with gr.Column():
-                                slice_opt_root = gr.Textbox(
-                                    label=i18n("切分后的子音频的输出根目录"),
-                                    interactive=True,
-                                    value="WORKSPACE/slicer_opt",
-                                )
-                                slice_opt_ex = gr.FileExplorer(
-                                    label=i18n("切分后的子音频的输出根目录"),
-                                    file_count="single",
-                                    interactive=True,
-                                    root_dir="WORKSPACE",
-                                    visible=True,
-                                    ignore_glob="**/.DS_Store",
-                                )
-                                slice_opt_ex.change(update_path, [slice_opt_ex], [slice_opt_root])
+                                with gr.Row(equal_height=True):
+                                    with gr.Column():
+                                        slice_inp_path = gr.Textbox(
+                                            label=i18n(
+                                                "填写音频自动切分输入路径，或在将文件放入项目根目录下的WORKSPACE后在下方选择"
+                                            ),
+                                            interactive=True,
+                                            value="",
+                                        )
+                                    with gr.Column():
+                                        slice_opt_root = gr.Textbox(
+                                            label=i18n("切分后的子音频的输出根目录"),
+                                            interactive=True,
+                                            value="WORKSPACE/slicer_opt",
+                                        )
+                                with gr.Row():
+                                    slice_inp_ex = gr.FileExplorer(
+                                        label=i18n("填写音频自动切分输入路径，或在下方选择"),
+                                        file_count="single",
+                                        interactive=True,
+                                        root_dir="WORKSPACE",
+                                        visible=True,
+                                        ignore_glob="**/.DS_Store",
+                                    )
+                                    slice_inp_ex.change(update_path, [slice_inp_ex], [slice_inp_path])
+                                    slice_opt_ex = gr.FileExplorer(
+                                        label=i18n("切分后的子音频的输出根目录"),
+                                        file_count="single",
+                                        interactive=True,
+                                        root_dir="WORKSPACE",
+                                        visible=True,
+                                        ignore_glob="**/.DS_Store",
+                                    )
+                                    slice_opt_ex.change(update_path, [slice_opt_ex], [slice_opt_root])
+                            # with gr.Column():
+                            #     # with gr.Row():
+                            #     slice_inp_path = gr.Textbox(
+                            #         label=i18n(
+                            #             "填写音频自动切分输入路径，或在将文件放入项目根目录下的WORKSPACE后在下方选择"
+                            #         ),
+                            #         interactive=True,
+                            #         value="",
+                            #     )
+                            #     # slice_inp_btn = gr.Button(value=i18n("选择"), variant="primary", visible=True)
+                            #     slice_inp_ex = gr.FileExplorer(
+                            #         label=i18n("填写音频自动切分输入路径，或在下方选择"),
+                            #         file_count="single",
+                            #         interactive=True,
+                            #         root_dir="WORKSPACE",
+                            #         visible=True,
+                            #         ignore_glob="**/.DS_Store",
+                            #     )
+                            #     slice_inp_ex.change(update_path, [slice_inp_ex], [slice_inp_path])
+                            #     # slice_inp_btn.click(toggle_path, [slice_inp_ex], [slice_inp_ex])
+                            # with gr.Column():
+                            #     slice_opt_root = gr.Textbox(
+                            #         label=i18n("切分后的子音频的输出根目录"),
+                            #         interactive=True,
+                            #         value="WORKSPACE/slicer_opt",
+                            #     )
+                            #     slice_opt_ex = gr.FileExplorer(
+                            #         label=i18n("切分后的子音频的输出根目录"),
+                            #         file_count="single",
+                            #         interactive=True,
+                            #         root_dir="WORKSPACE",
+                            #         visible=True,
+                            #         ignore_glob="**/.DS_Store",
+                            #     )
+                            #     slice_opt_ex.change(update_path, [slice_opt_ex], [slice_opt_root])
                         with gr.Row():
                             threshold = gr.Textbox(
                                 label=i18n("threshold:音量小于这个值视作静音的备选切割点"), value="-34", visible=False
@@ -593,36 +630,83 @@ with gr.Blocks(title="IndexTTS WebUI", analytics_enabled=False) as app:
                                 visible=False,
                             )
                             slicer_info = gr.Textbox(label=process_info(process_name_slice, "info"))
-                    open_slicer_button = gr.Button(
-                        value=process_info(process_name_slice, "open"), variant="primary", visible=True
-                    )
-                    close_slicer_button = gr.Button(
-                        value=process_info(process_name_slice, "close"), variant="primary", visible=False
-                    )
-
-            gr.Markdown(value="0c-" + i18n("语音降噪工具"))
-            with gr.Row():
-                with gr.Column(scale=3):
-                    with gr.Row():
-                        denoise_input_dir = gr.Textbox(label=i18n("填写输入文件夹路径"), value="WORKSPACE/slicer_opt")
-                        slice_inp_ex = gr.FileExplorer(
-                            label=i18n("请选择输入文件夹"),
-                            file_count="single",
-                            interactive=True,
-                            root_dir="WORKSPACE/slicer_opt",
-                            visible=True,
-                            ignore_glob="**/.DS_Store",
+                    with gr.Column(scale=1):
+                        open_slicer_button = gr.Button(
+                            value=process_info(process_name_slice, "open"), variant="primary", visible=True
                         )
-                        slice_inp_ex.change(update_path, [slice_inp_ex], [denoise_input_dir])
-                        denoise_output_dir = gr.Textbox(label=i18n("填写输出文件夹路径"), value="WORKSPACE/denoise_opt")
-                    with gr.Row():
-                        denoise_info = gr.Textbox(label=process_info(process_name_denoise, "info"))
-                open_denoise_button = gr.Button(
-                    value=process_info(process_name_denoise, "open"), variant="primary", visible=True
-                )
-                close_denoise_button = gr.Button(
-                    value=process_info(process_name_denoise, "close"), variant="primary", visible=False
-                )
+                        close_slicer_button = gr.Button(
+                            value=process_info(process_name_slice, "close"), variant="primary", visible=False
+                        )
+            with gr.Accordion(label="0c-" + i18n("语音降噪工具")):
+                with gr.Row(equal_height=True):
+                    with gr.Column(scale=3):
+                        with gr.Row(equal_height=True):
+                            with gr.Column():
+                                with gr.Row(equal_height=True):
+                                    with gr.Column():
+                                        denoise_input_dir = gr.Textbox(
+                                            label=i18n("填写输入文件夹路径"), value="WORKSPACE/slicer_opt"
+                                        )
+                                    with gr.Column():
+                                        denoise_output_dir = gr.Textbox(
+                                            label=i18n("填写输出文件夹路径"), value="WORKSPACE/denoise_opt"
+                                        )
+                                with gr.Row():
+                                    slice_inp_ex = gr.FileExplorer(
+                                        label=i18n("请选择输入文件夹"),
+                                        file_count="single",
+                                        interactive=True,
+                                        root_dir="WORKSPACE",
+                                        visible=True,
+                                        ignore_glob="**/.DS_Store",
+                                    )
+                                    slice_inp_ex.change(update_path, [slice_inp_ex], [denoise_input_dir])
+                                    denoise_output_dir_ex = gr.FileExplorer(
+                                        label=i18n("请选择输入文件夹"),
+                                        file_count="single",
+                                        interactive=True,
+                                        root_dir="WORKSPACE",
+                                        visible=True,
+                                        ignore_glob="**/.DS_Store",
+                                    )
+                                    denoise_output_dir_ex.change(
+                                        update_path, [denoise_output_dir_ex], [denoise_input_dir]
+                                    )
+                            # with gr.Column():
+                            #     denoise_input_dir = gr.Textbox(
+                            #         label=i18n("填写输入文件夹路径"), value="WORKSPACE/slicer_opt"
+                            #     )
+                            #     slice_inp_ex = gr.FileExplorer(
+                            #         label=i18n("请选择输入文件夹"),
+                            #         file_count="single",
+                            #         interactive=True,
+                            #         root_dir="WORKSPACE",
+                            #         visible=True,
+                            #         ignore_glob="**/.DS_Store",
+                            #     )
+                            #     slice_inp_ex.change(update_path, [slice_inp_ex], [denoise_input_dir])
+                            # with gr.Column():
+                            #     denoise_output_dir = gr.Textbox(
+                            #         label=i18n("填写输出文件夹路径"), value="WORKSPACE/denoise_opt"
+                            #     )
+                            #     denoise_output_dir_ex = gr.FileExplorer(
+                            #         label=i18n("请选择输入文件夹"),
+                            #         file_count="single",
+                            #         interactive=True,
+                            #         root_dir="WORKSPACE",
+                            #         visible=True,
+                            #         ignore_glob="**/.DS_Store",
+                            #     )
+                            #     denoise_output_dir_ex.change(update_path, [denoise_output_dir_ex], [denoise_input_dir])
+                        with gr.Row():
+                            denoise_info = gr.Textbox(label=process_info(process_name_denoise, "info"))
+                    with gr.Column(scale=1):
+                        open_denoise_button = gr.Button(
+                            value=process_info(process_name_denoise, "open"), variant="primary", visible=True
+                        )
+                        close_denoise_button = gr.Button(
+                            value=process_info(process_name_denoise, "close"), variant="primary", visible=False
+                        )
 
             open_uvr5.click(change_uvr5, [], [uvr5_info, open_uvr5, close_uvr5])
             close_uvr5.click(change_uvr5, [], [uvr5_info, open_uvr5, close_uvr5])
@@ -650,19 +734,22 @@ with gr.Blocks(title="IndexTTS WebUI", analytics_enabled=False) as app:
             )
             close_denoise_button.click(close_denoise, [], [denoise_info, open_denoise_button, close_denoise_button])
         with gr.TabItem("1-" + i18n("TTS推理")):
-            with gr.Row():
-                open_tts = gr.Button(value=process_info(process_name_tts, "open"), variant="primary", visible=True)
-                close_tts = gr.Button(value=process_info(process_name_tts, "close"), variant="primary", visible=False)
-            with gr.Row():
+            with gr.Row(equal_height=True):
+                with gr.Column():
+                    open_tts = gr.Button(value=process_info(process_name_tts, "open"), variant="primary", visible=True)
+                    close_tts = gr.Button(
+                        value=process_info(process_name_tts, "close"), variant="primary", visible=False
+                    )
                 tts_info = gr.Textbox(label=process_info(process_name_tts, "info"))
             open_tts.click(change_tts_inference, [], [tts_info, open_tts, close_tts])
             close_tts.click(change_tts_inference, [], [tts_info, open_tts, close_tts])
 
-    app.queue().launch(  # concurrency_count=511, max_size=1022
+    app.queue(api_open=False).launch(  # concurrency_count=511, max_size=1022
         server_name="0.0.0.0",
         inbrowser=True,
         share=is_share,
         server_port=webui_port_main,
         quiet=True,
         allowed_paths=list_root_directories(),
+        show_api=False,
     )
