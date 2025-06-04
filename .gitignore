@@ -12,3 +12,4 @@ outputs/
 **/checkpoints/
 
 .mypy_cache
+WORKSPACE/*
