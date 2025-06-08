@@ -12,7 +12,7 @@ import gradio as gr
 import numpy as np
 import torch
 
-from assets.assets import css, js, top_html
+from assets.assets import Seafoam, css, js, top_html
 from indextts.infer import IndexTTS
 from tools.common import list_root_directories
 from tools.i18n.i18n import I18nAuto, scan_language_list
@@ -235,7 +235,7 @@ def split_text(full_text, how_to_cut):
         have_next = False
 
     return (
-        text,
+        gr.Textbox(text, lines=34, max_lines=34),
         lines,
         gr.Button(interactive=False, visible=True),
         gr.Button(interactive=have_next, visible=True),
@@ -255,7 +255,7 @@ def update_text(full_text):
         have_next = False
 
     return (
-        full_text,
+        gr.Textbox(full_text, lines=34, max_lines=34),
         lines,
         gr.Button(interactive=False, visible=True),
         gr.Button(interactive=have_next, visible=True),
@@ -356,7 +356,7 @@ def open_finder():
     跨平台打开系统文件管理器
 
     Args:
-        path: 要打开的���件夹路径
+        path: 要打开的文件夹路径
 
     Returns:
         None
@@ -389,7 +389,7 @@ def open_finder():
         gr.Warning(i18n(f"打开文件管理器失败: {str(e)}"))
 
 
-with gr.Blocks(title="Index-TTS Editor", analytics_enabled=False, css=css, js=js) as app:
+with gr.Blocks(title="Index-TTS Editor", analytics_enabled=False, css=css, js=js, theme=Seafoam()) as app:
     timer = gr.Timer(value=0.1, active=False)
     timer.tick(lambda: gr.Timer(active=False), inputs=[], outputs=[timer])
     gr.HTML(
@@ -435,10 +435,10 @@ with gr.Blocks(title="Index-TTS Editor", analytics_enabled=False, css=css, js=js
     # load_prompts_btn = gr.Button(i18n("加载参考音频"), variant="primary")
 
     gr.Markdown(html_center(i18n("*请填写需要合成的目标文本"), "h3"))
-    with gr.Row():
+    with gr.Row(equal_height=True):
         with gr.Column(scale=2):
             text = gr.Textbox(label=i18n("需要合成的文本"), value="", lines=26, max_lines=26)
-        with gr.Column():
+        with gr.Column(scale=1):
             cut_method_dropdown = gr.Dropdown(
                 label=i18n("切分文本方法"),
                 value=i18n("按标点符号切"),
@@ -461,9 +461,8 @@ with gr.Blocks(title="Index-TTS Editor", analytics_enabled=False, css=css, js=js
             prev_page_btn = gr.Button(i18n("上一页"), variant="primary", visible=False, elem_id="prev_btn")
             next_page_btn = gr.Button(i18n("下一页"), variant="primary", visible=False, elem_id="next_btn")
 
-    with gr.Row(equal_height=True):
-        df = gr.DataFrame(col_count=2, label=i18n("文本列表"), interactive=False, show_row_numbers=True, visible=False)
-        df.change(lambda x: gr.Textbox(str(len(x)), visible=True), inputs=df, outputs=[df_len], queue=False)
+    df = gr.DataFrame(col_count=2, label=i18n("文本列表"), interactive=False, show_row_numbers=True, visible=False)
+    df.change(lambda x: gr.Textbox(str(len(x)), visible=True), inputs=df, outputs=[df_len], queue=False)
 
     @gr.render(
         inputs=[df, id_start, id_end, inp_dir],
@@ -485,37 +484,36 @@ with gr.Blocks(title="Index-TTS Editor", analytics_enabled=False, css=css, js=js
                 if i > end:
                     break
                 with gr.Row(equal_height=True):
-                    with gr.Column():
+                    with gr.Column(scale=2):
                         with gr.Row(equal_height=True):
-                            sentence_text = gr.Textbox(
-                                value=input_[0],
-                                type="text",
-                                lines=1,
-                                max_lines=6,
-                                # key=f"text_{i}",
-                                label=f"目标文本 {i}",
-                                interactive=False,
-                            )
-                    with gr.Column():
-                        prompt_choices = load_prompt(input_dir)
-                        ref_selector = gr.Dropdown(
-                            label=i18n("选择参考音频"),
-                            choices=prompt_choices,
-                            value=prompt_choices[0] if len(prompt_choices) > 0 else None,
-                        )
-
-                        default_prompt_path = (
-                            os.path.join(input_dir, prompt_choices[0]) if len(prompt_choices) > 0 else None
-                        )
-
-                        ref_audio = gr.Audio(
-                            label=i18n("或者上传音频文件"),
-                            interactive=True,
-                            value=default_prompt_path,
-                            type="filepath",
-                            sources="upload",
-                            waveform_options={"show_recording_waveform": False, "show_controls": False},
-                        )
+                            with gr.Column():
+                                sentence_text = gr.Textbox(
+                                    value=input_[0],
+                                    type="text",
+                                    lines=1,
+                                    max_lines=6,
+                                    # key=f"text_{i}",
+                                    label=f"目标文本 {i}",
+                                    interactive=False,
+                                )
+                            with gr.Column():
+                                prompt_choices = load_prompt(input_dir)
+                                ref_selector = gr.Dropdown(
+                                    label=i18n("选择参考音频"),
+                                    choices=prompt_choices,
+                                    value=prompt_choices[0] if len(prompt_choices) > 0 else None,
+                                )
+                                default_prompt_path = (
+                                    os.path.join(input_dir, prompt_choices[0]) if len(prompt_choices) > 0 else None
+                                )
+                                ref_audio = gr.Audio(
+                                    label=i18n("或者上传音频文件"),
+                                    interactive=True,
+                                    value=default_prompt_path,
+                                    type="filepath",
+                                    sources="upload",
+                                    waveform_options={"show_recording_waveform": False, "show_controls": False},
+                                )
 
                     with gr.Column():
                         target_path = f"{i:04d}-{input_[0][:20]}.wav"
