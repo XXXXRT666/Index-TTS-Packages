@@ -749,7 +749,7 @@ with gr.Blocks(title="IndexTTS WebUI", analytics_enabled=False) as app:
         inbrowser=True,
         share=is_share,
         server_port=webui_port_main,
-        quiet=True,
+        quiet=False,
         allowed_paths=list_root_directories(),
         show_api=False,
     )

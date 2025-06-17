@@ -450,16 +450,16 @@ with gr.Blocks(title="Index-TTS Editor", analytics_enabled=False, css=css, js=js
                     i18n("按标点符号切"),
                 ],
             )
-            cut_text_btn = gr.Button(i18n("切分文本"), variant="primary")
-            load_text_btn = gr.Button(i18n("刷新文本&参考音频列表"), variant="primary")
+            cut_text_btn = gr.Button(i18n("切分文本"), variant="secondary")
+            load_text_btn = gr.Button(i18n("刷新文本&参考音频列表"), variant="secondary")
             batch_size = gr.Slider(label=i18n("批处理大小"), value=10, minimum=1, maximum=10, step=1, visible=False)
             df_len = gr.Textbox(label=i18n("文本分句总数"), value="0", interactive=False, visible=False)
             id_start = gr.Textbox(value="0", label=i18n("最小序号"), interactive=False, max_lines=1, visible=False)
             id_end = gr.Textbox(
                 value=f"{batch_size.value}", label=i18n("最大序号"), interactive=False, max_lines=1, visible=False
             )
-            prev_page_btn = gr.Button(i18n("上一页"), variant="primary", visible=False, elem_id="prev_btn")
-            next_page_btn = gr.Button(i18n("下一页"), variant="primary", visible=False, elem_id="next_btn")
+            prev_page_btn = gr.Button(i18n("上一页"), variant="secondary", visible=False, elem_id="prev_btn")
+            next_page_btn = gr.Button(i18n("下一页"), variant="secondary", visible=False, elem_id="next_btn")
 
     df = gr.DataFrame(col_count=2, label=i18n("文本列表"), interactive=False, show_row_numbers=True, visible=False)
     df.change(lambda x: gr.Textbox(str(len(x)), visible=True), inputs=df, outputs=[df_len], queue=False)
@@ -539,7 +539,7 @@ with gr.Blocks(title="Index-TTS Editor", analytics_enabled=False, css=css, js=js
                                 "生成音频",
                                 key=f"regen_{i}",
                                 interactive=True,
-                                variant="primary",
+                                variant="secondary",
                             )
 
                     def gen_single(ref_path, text, out_dir, index):
@@ -556,8 +556,8 @@ with gr.Blocks(title="Index-TTS Editor", analytics_enabled=False, css=css, js=js
                     )
 
     with gr.Row():
-        prev_page_btn_ = gr.Button(i18n("上一页"), variant="primary", visible=False)
-        next_page_btn_ = gr.Button(i18n("下一页"), variant="primary", visible=False)
+        prev_page_btn_ = gr.Button(i18n("上一页"), variant="secondary", visible=False)
+        next_page_btn_ = gr.Button(i18n("下一页"), variant="secondary", visible=False)
 
     prev_page_btn.click(
         prev_page,
