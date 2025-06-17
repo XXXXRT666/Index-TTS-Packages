@@ -4,7 +4,7 @@ import json
 import os
 from collections import OrderedDict
 
-I18N_JSON_DIR   : os.PathLike = os.path.join(os.path.dirname(os.path.relpath(__file__)), 'locale')
+I18N_JSON_DIR   : os.PathLike = os.path.join(os.path.dirname(os.path.relpath(__file__)), 'locales')
 DEFAULT_LANGUAGE: str         = "zh_CN" # 默认语言
 TITLE_LEN       : int         = 60      # 标题显示长度
 KEY_LEN         : int         = 30      # 键名显示长度

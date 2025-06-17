@@ -19,7 +19,16 @@ omegaconf
 sentencepiece
 librosa
 gradio
+funasr==1.0.27
+modelscope
 tqdm
-
-WeTextProcessing; platform_machine != "Darwin"
+addict
+datasets==2.18.0
+WeTextProcessing; platform_system != "Darwin"
 wetext; platform_system == "Darwin"
+# Faster_Whisper
+onnxruntime; platform_machine == "aarch64" or platform_machine == "arm64"
+onnxruntime-gpu; platform_machine == "x86_64" or platform_machine == "amd64"
+simplejson
+sortedcontainers
+scipy
