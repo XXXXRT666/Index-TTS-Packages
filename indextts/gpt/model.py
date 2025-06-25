@@ -3,10 +3,10 @@ import functools
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import GPT2Config, GPT2PreTrainedModel, LogitsProcessorList, GenerationMixin
+import torch.utils.cpp_extension
+from transformers import GenerationMixin, GPT2Config, GPT2PreTrainedModel, LogitsProcessorList
 from transformers.modeling_outputs import CausalLMOutputWithCrossAttentions
-from transformers.utils.model_parallel_utils import (assert_device_map,
-                                                     get_device_map)
+from transformers.utils.model_parallel_utils import assert_device_map, get_device_map
 
 from indextts.gpt.conformer_encoder import ConformerEncoder
 from indextts.gpt.perceiver import PerceiverResampler
@@ -406,22 +406,26 @@ class UnifiedVoice(nn.Module):
             self.mel_head,
             kv_cache=kv_cache,
         )
-        if use_deepspeed and half and torch.cuda.is_available():
-            import deepspeed
-            self.ds_engine = deepspeed.init_inference(model=self.inference_model,
-                                                      mp_size=1,
-                                                      replace_with_kernel_inject=False,
-                                                      dtype=torch.float16)
-            self.inference_model = self.ds_engine.module.eval()
-        elif use_deepspeed and torch.cuda.is_available():
-            import deepspeed
-            self.ds_engine = deepspeed.init_inference(model=self.inference_model,
-                                                      mp_size=1,
-                                                      replace_with_kernel_inject=False,
-                                                      dtype=torch.float32)
-            self.inference_model = self.ds_engine.module.eval()
+        if torch.utils.cpp_extension.CUDA_HOME is not None:
+            print("[INFO] Found CUDA_HOME, Swich to DeepSeed Mode")
+            if use_deepspeed and half and torch.cuda.is_available():
+                import deepspeed
+                self.ds_engine = deepspeed.init_inference(model=self.inference_model,
+                                                        mp_size=1,
+                                                        replace_with_kernel_inject=False,
+                                                        dtype=torch.float16)
+                self.inference_model = self.ds_engine.module.eval()
+            elif use_deepspeed and torch.cuda.is_available():
+                import deepspeed
+                self.ds_engine = deepspeed.init_inference(model=self.inference_model,
+                                                        mp_size=1,
+                                                        replace_with_kernel_inject=False,
+                                                        dtype=torch.float32)
+                self.inference_model = self.ds_engine.module.eval()
+            else:
+                self.inference_model = self.inference_model.eval()
         else:
-            self.inference_model = self.inference_model.eval()
+            print("[INFO] CUDA_HOME is None, Switch to Naive Mode")
 
         # self.inference_model = PrunedGPT2InferenceModel(gpt_config, self.gpt, self.mel_pos_embedding, self.mel_embedding, self.final_norm, self.mel_head)
         self.gpt.wte = self.mel_embedding
