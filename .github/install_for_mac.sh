@@ -84,7 +84,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 cd "$SCRIPT_DIR"
 
 WORKDIR=$(pwd)
-export PYTHONPATH=WORKDIR
+export PYTHONPATH="$WORKDIR"
 export PATH="$WORKDIR/venv/bin:$PATH"
 
 ./venv/bin/python app.py
