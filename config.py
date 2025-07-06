@@ -1,29 +1,18 @@
 import os
+import re
 import sys
 
 import torch
 
 # 推理用的指定模型
-sovits_path = ""
-gpt_path = ""
 is_half_str = os.environ.get("is_half", "True")
 is_half = True if is_half_str.lower() == "true" else False
 is_share_str = os.environ.get("is_share", "False")
 is_share = True if is_share_str.lower() == "true" else False
 
-cnhubert_path = "GPT_SoVITS/pretrained_models/chinese-hubert-base"
-bert_path = "GPT_SoVITS/pretrained_models/chinese-roberta-wwm-ext-large"
-pretrained_sovits_path = "GPT_SoVITS/pretrained_models/s2G488k.pth"
-pretrained_gpt_path = "GPT_SoVITS/pretrained_models/s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt"
 
 exp_root = "logs"
 python_exec = sys.executable or "python"
-if torch.cuda.is_available():
-    infer_device = "cuda"
-elif torch.mps.is_available():
-    infer_device = "mps"
-else:
-    infer_device = "cpu"
 
 webui_port_main = 9874
 webui_port_uvr5 = 9873
@@ -32,40 +21,45 @@ webui_port_subfix = 9871
 
 api_port = 9880
 
-if infer_device == "cuda":
-    gpu_name = torch.cuda.get_device_name(0)
-    if (
-        ("16" in gpu_name and "V100" not in gpu_name.upper())
-        or "P40" in gpu_name.upper()
-        or "P10" in gpu_name.upper()
-        or "1060" in gpu_name
-        or "1070" in gpu_name
-        or "1080" in gpu_name
-    ):
-        is_half = False
 
-if infer_device == "cpu" or infer_device == "mps":
-    is_half = False
+def get_device_dtype_sm(idx: int) -> tuple[torch.device, torch.dtype, float, float]:
+    cpu = torch.device("cpu")
+    cuda = torch.device(f"cuda:{idx}")
+    if not torch.cuda.is_available():
+        return cpu, torch.float32, 0.0, 0.0
+    device_idx = idx
+    capability = torch.cuda.get_device_capability(device_idx)
+    name = torch.cuda.get_device_name(device_idx)
+    mem_bytes = torch.cuda.get_device_properties(device_idx).total_memory
+    mem_gb = mem_bytes / (1024**3) + 0.4
+    major, minor = capability
+    sm_version = major + minor / 10.0
+    is_16_series = bool(re.search(r"16\d{2}", name)) and sm_version == 7.5
+    if mem_gb < 4 or sm_version < 5.3:
+        return cpu, torch.float32, 0.0, 0.0
+    if sm_version == 6.1 or is_16_series is True:
+        return cuda, torch.float32, sm_version, mem_gb
+    if sm_version > 6.1:
+        return cuda, torch.float16, sm_version, mem_gb
+    return cpu, torch.float32, 0.0, 0.0
 
 
-class Config:
-    def __init__(self):
-        self.sovits_path = sovits_path
-        self.gpt_path = gpt_path
-        self.is_half = is_half
+IS_GPU = True
+GPU_INFOS: list[str] = []
+GPU_INDEX: set[int] = set()
+GPU_COUNT = torch.cuda.device_count()
+tmp: list[tuple[torch.device, torch.dtype, float, float]] = []
+memset: set[float] = set()
 
-        self.cnhubert_path = cnhubert_path
-        self.bert_path = bert_path
-        self.pretrained_sovits_path = pretrained_sovits_path
-        self.pretrained_gpt_path = pretrained_gpt_path
+for i in range(max(GPU_COUNT, 1)):
+    tmp.append(get_device_dtype_sm(i))
 
-        self.exp_root = exp_root
-        self.python_exec = python_exec
-        self.infer_device = infer_device
+for j in tmp:
+    device = j[0]
+    memset.add(j[3])
+    if device.type != "cpu":
+        GPU_INFOS.append(f"{device.index}\t{torch.cuda.get_device_name(device.index)}")
+        GPU_INDEX.add(device.index)
 
-        self.webui_port_main = webui_port_main
-        self.webui_port_uvr5 = webui_port_uvr5
-        self.webui_port_infer_tts = webui_port_infer_tts
-        self.webui_port_subfix = webui_port_subfix
-
-        self.api_port = api_port
+infer_device = max(tmp, key=lambda x: (x[2], x[3]))[0]
+is_half = any(dtype == torch.float16 for _, dtype, _, _ in tmp)

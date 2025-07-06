@@ -422,9 +422,8 @@ class UnifiedVoice(nn.Module):
                                                         replace_with_kernel_inject=False,
                                                         dtype=torch.float32)
                 self.inference_model = self.ds_engine.module.eval()
-            else:
-                self.inference_model = self.inference_model.eval()
         else:
+            self.inference_model = self.inference_model.eval()
             print("[INFO] CUDA_HOME is None, Switch to Naive Mode")
 
         # self.inference_model = PrunedGPT2InferenceModel(gpt_config, self.gpt, self.mel_pos_embedding, self.mel_embedding, self.final_norm, self.mel_head)
