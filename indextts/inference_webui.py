@@ -13,6 +13,7 @@ import numpy as np
 import torch
 
 from assets.assets import Seafoam, css, js, top_html
+from config import infer_device, is_half
 from indextts.infer import IndexTTS
 from tools.common import list_root_directories
 from tools.i18n.i18n import I18nAuto, scan_language_list
@@ -28,14 +29,13 @@ logging.getLogger("multipart.multipart").setLevel(logging.ERROR)
 warnings.simplefilter(action="ignore", category=FutureWarning)
 warnings.simplefilter(action="ignore", category=UserWarning)
 
-tts = IndexTTS(model_dir="checkpoints", cfg_path="checkpoints/config.yaml")
-device = tts.device
+tts = IndexTTS(model_dir="checkpoints", cfg_path="checkpoints/config.yaml", is_fp16=is_half, device=infer_device)
+device = infer_device
 
 infer_ttswebui = os.environ.get("infer_ttswebui", 9872)
 infer_ttswebui = int(infer_ttswebui)
 is_share = os.environ.get("is_share", "False")
 is_share = eval(is_share)
-is_half = eval(os.environ.get("is_half", "True")) and torch.cuda.is_available()
 punctuation = set(["!", "?", "…", ",", ".", "-", " "])
 
 
