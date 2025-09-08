@@ -1,0 +1,47 @@
+name: Build FFmpeg Arm64
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache FFmpeg
+        id: cache-ffmpeg
+        uses: actions/cache@v4
+        with:
+          path: ~/ffmpeg-cache
+          key: ${{ runner.os }}-ffmpeg-${{ hashFiles('.github/ffmpeg-cache.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-ffmpeg-
+
+      - name: Mark FFmpeg as usable if binary exists
+        id: check-ffmpeg
+        run: |
+          if [ -f "~/ffmpeg-cache/bin/ffmpeg" ]; then
+            echo "ffmpeg_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ffmpeg_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build FFmpeg (if cache not hit)
+        if: ${{ steps.cache-ffmpeg.outputs.cache-hit != 'true' || steps.check-ffmpeg.outputs.ffmpeg_exists != 'true' }}
+        run: |
+          echo $(pwd)
+          rm -rf ~/ffmpeg-cache
+          mkdir ~/ffmpeg-cache
+          ls ~/ffmpeg-cache
+          sudo rm -rf /Library/Frameworks/Mono.framework
+          mkdir tmp
+          cd tmp
+          git clone "https://github.com/Vargol/ffmpeg-apple-arm64-build.git"
+          ./ffmpeg-apple-arm64-build/build.sh
+          cd ../
+          rsync -a tmp/out/* ~/ffmpeg-cache/
+          ls ~/ffmpeg-cache
+          rm -rf tmp

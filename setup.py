@@ -1,13 +1,12 @@
-
 import platform
-import os
+
 from setuptools import find_packages, setup
+from torch.utils import cpp_extension
 
 # add fused `anti_alias_activation` cuda extension if CUDA is available
 anti_alias_activation_cuda_ext = None
-if  platform.system() != "Darwin":
+if platform.system() != "Darwin":
     try:
-        from torch.utils import cpp_extension
         if cpp_extension.CUDA_HOME is not None:
             anti_alias_activation_cuda_ext = cpp_extension.CUDAExtension(
                 name="indextts.BigVGAN.alias_free_activation.cuda.anti_alias_activation_cuda",
@@ -35,7 +34,7 @@ if  platform.system() != "Darwin":
 
 setup(
     name="indextts",
-    version="0.1.4",
+    version="2.0.0",
     author="Index SpeechTeam",
     author_email="xuanwu@bilibili.com",
     long_description=open("README.md", encoding="utf8").read(),

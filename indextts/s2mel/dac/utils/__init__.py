@@ -40,9 +40,7 @@ __MODEL_URLS__ = {
 
 
 @argbind.bind(group="download", positional=True, without_prefix=True)
-def download(
-    model_type: str = "44khz", model_bitrate: str = "8kbps", tag: str = "latest"
-):
+def download(model_type: str = "44khz", model_bitrate: str = "8kbps", tag: str = "latest"):
     """
     Function that downloads the weights file from URL if a local cache is not found.
 
@@ -81,17 +79,9 @@ def download(
     download_link = __MODEL_URLS__.get((model_type, tag, model_bitrate), None)
 
     if download_link is None:
-        raise ValueError(
-            f"Could not find model with tag {tag} and model type {model_type}"
-        )
+        raise ValueError(f"Could not find model with tag {tag} and model type {model_type}")
 
-    local_path = (
-        Path.home()
-        / ".cache"
-        / "descript"
-        / "dac"
-        / f"weights_{model_type}_{model_bitrate}_{tag}.pth"
-    )
+    local_path = Path.home() / ".cache" / "descript" / "dac" / f"weights_{model_type}_{model_bitrate}_{tag}.pth"
     if not local_path.exists():
         local_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -101,9 +91,7 @@ def download(
         response = requests.get(download_link)
 
         if response.status_code != 200:
-            raise ValueError(
-                f"Could not download model. Received response code {response.status_code}"
-            )
+            raise ValueError(f"Could not download model. Received response code {response.status_code}")
         local_path.write_bytes(response.content)
 
     return local_path
@@ -116,8 +104,6 @@ def load_model(
     load_path: str = None,
 ):
     if not load_path:
-        load_path = download(
-            model_type=model_type, model_bitrate=model_bitrate, tag=tag
-        )
+        load_path = download(model_type=model_type, model_bitrate=model_bitrate, tag=tag)
     generator = DAC.load(load_path)
     return generator

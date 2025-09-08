@@ -1,0 +1,63 @@
+name: Build and Upload macOS Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Date suffix (optional)"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: macos-latest
+    env:
+      MODELSCOPE_USERNAME: ${{ secrets.MODELSCOPE_USERNAME }}
+      MODELSCOPE_TOKEN: ${{ secrets.MODELSCOPE_TOKEN }}
+      DATE: ${{ github.event.inputs.date }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Cache FFmpeg
+        id: cache-ffmpeg
+        uses: actions/cache@v4
+        with:
+          path: ~/ffmpeg-cache
+          key: ${{ runner.os }}-ffmpeg-${{ hashFiles('.github/ffmpeg-cache.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-ffmpeg-
+
+      - name: Build FFmpeg
+        run: |
+          if [ -f ~/ffmpeg-cache/bin/ffmpeg ]; then
+            exit 0
+          else
+            echo $(pwd)
+            rm -rf ~/ffmpeg-cache
+            mkdir ~/ffmpeg-cache
+            ls ~/ffmpeg-cache
+            sudo rm -rf /Library/Frameworks/Mono.framework
+            mkdir tmp
+            cd tmp
+            git clone "https://github.com/Vargol/ffmpeg-apple-arm64-build.git"
+            ./ffmpeg-apple-arm64-build/build.sh
+            cd ../
+            rsync -a tmp/out/* ~/ffmpeg-cache/
+            ls ~/ffmpeg-cache
+            rm -rf tmp
+          fi
+
+      - name: Run Build and Upload Script
+        shell: bash
+        run: |
+          bash ./.github/build_macos_packages.sh
