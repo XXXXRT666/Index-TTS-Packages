@@ -13,7 +13,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        torch_cuda: [cu124, cu128]
+        torch_cuda: [cu126, cu128]
     env:
       TORCH_CUDA: ${{ matrix.torch_cuda }}
       MODELSCOPE_USERNAME: ${{ secrets.MODELSCOPE_USERNAME }}
@@ -30,7 +30,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: c:\users\runneradmin\appdata\local\pip\cache
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
