@@ -149,7 +149,7 @@ Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $wheelPath
 Write-Host "[INFO] Download Models..."
 python -m pip install --upgrade pip
 python -m pip install "modelscope" "huggingface_hub" --no-warn-script-location
-huggingface-cli download IndexTeam/IndexTTS-1.5 config.yaml bigvgan_discriminator.pth bigvgan_generator.pth bpe.model dvae.pth gpt.pth unigram_12000.vocab --local-dir checkpoints
+hf download IndexTeam/IndexTTS-1.5 config.yaml bigvgan_discriminator.pth bigvgan_generator.pth bpe.model dvae.pth gpt.pth unigram_12000.vocab --local-dir checkpoints
 
 Write-Host "[INFO] Preparing final directory $pkgName ..."
 $items = @(Get-ChildItem -Filter "*.sh") +
