@@ -37,7 +37,7 @@ pip3.10 install -r requirements.txt -i https://pypi.org/simple
 
 /opt/homebrew/bin/python3 -m pip install setuptools huggingface_hub modelscope -U --break-system-packages
 
-/opt/homebrew/bin/huggingface-cli download IndexTeam/IndexTTS-1.5 \
+/opt/homebrew/bin/hf download IndexTeam/IndexTTS-1.5 \
     config.yaml bigvgan_discriminator.pth bigvgan_generator.pth bpe.model dvae.pth gpt.pth unigram_12000.vocab \
     --local-dir checkpoints
 
